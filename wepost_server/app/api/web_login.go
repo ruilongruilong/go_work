@@ -47,7 +47,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 
 func web_login_status(w http.ResponseWriter, r *http.Request) {
     type Message struct {
-        session_key, kk string
+        SessionKey, Token string
     }
     c, err := upgrader.Upgrade(w, r, nil)
     if err != nil {
@@ -56,27 +56,35 @@ func web_login_status(w http.ResponseWriter, r *http.Request) {
     }
     defer c.Close()
     for {
-    encoder := json.NewEncoder(w)
-    var mm Message
-    m_err := encoder.Encode(mm)
-    log.Println(m_err)
         mt, message, err := c.ReadMessage()
         log.Println(message)
         message_str := fmt.Sprintf("%s", message)
         log.Println(strings.NewReader(message_str))
-        byt := []byte(`{"num":6.13,"strs":["a","b"]}`)
-        byt = message
+
+        byt := []byte(`{"Num":"b","Strs":"a"}`)
+        log.Println(byt, string(byt))
+        log.Println(message, string(message))
+
+        type DataMessage struct {
+            Num string
+            Strs string
+        }
+        var d DataMessage
+        d_err := json.Unmarshal(byt, &d)
+        log.Println(d_err, "llllll")
+        log.Println(d.Num, "dddddddd")
+
         var dat map[string]interface{}
         if err := json.Unmarshal(byt, &dat); err != nil {
         }
         fmt.Println(dat)
-        fmt.Println(dat["session_key"])
+        fmt.Println(dat["SessionKey"])
         dec := json.NewDecoder(strings.NewReader(message_str))
-        log.Println(dec)
+        log.Println(dec, "dec")
 
         var m Message
         err = json.Unmarshal(message, &m)
-        log.Println(fmt.Printf("%v: %v\n", m.session_key, m.kk))
+        log.Println(fmt.Printf("%v: %v\n", m.SessionKey, m.Token))
 
         if err != nil {
             log.Println("read:", err)

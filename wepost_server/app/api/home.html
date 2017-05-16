@@ -41,7 +41,7 @@ window.addEventListener("load", function(evt) {
             return false;
         }
         print("SEND: " + input.value);
-        var json_str = {"session_key": "hello", "kk": "ll"}
+        var json_str = {"SessionKey": "hello", "Token": "ll"}
         json_str = JSON.stringify(json_str)
         ws.send(json_str);
         return false;
