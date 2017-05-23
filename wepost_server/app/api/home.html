@@ -28,7 +28,8 @@ window.addEventListener("load", function(evt) {
             ws = null;
         }
         ws.onmessage = function(evt) {
-            print("RESPONSE: " + evt.data);
+            var result = JSON.parse(evt.data)
+            print("RESPONSE: " + result.status);
         }
         ws.onerror = function(evt) {
             print("ERROR: " + evt.data);

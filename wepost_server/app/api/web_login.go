@@ -11,8 +11,9 @@ import (
     "log"
     "net/http"
     "encoding/json"
+    // "fmt"
+    "strconv"
     "strings"
-    "fmt"
 
     "github.com/gorilla/websocket"
     "wepost_server/util"
@@ -44,10 +45,42 @@ func echo(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func manage_web_login_status(login_token string) string{
+    var result string
+    result = `{"status": "expired", "message": "token不合法"}`
+    //key := fmt.Printf("login_token:%s", "login_token")
+    s := []string{"login_token:", login_token}
+    key := strings.Join(s, "")
+    ttl_time := redis_client.GetTTL(key)
+    if ttl_time <= 0 {
+        result = `{"status": "expired", "message": "登陆信息过期"}`
+        return result
+    }
+    user_id_str := redis_client.GetValue(key)
+
+    user_id := 0
+    var err error
+    if user_id_str != "" {
+        user_id, err = strconv.Atoi(user_id_str)
+        if err != nil {
+            user_id = 0
+        }
+    }
+    if user_id_str == "" || user_id == 0 {
+        result = `{"status": "default", "message": "等待客户端扫码"}`
+    } else if user_id == -1 {
+        result = `{"status": "waiting", "message": "等待客户端确认"}`
+    } else if user_id == -2 {
+        result = `{"status": "cancel", "message": "登陆信息已验证"}`
+    }
+    log.Println(result, key)
+    return result
+}
 
 func web_login_status(w http.ResponseWriter, r *http.Request) {
     type Message struct {
-        SessionKey, Token string
+        SessionKey  string
+        Token       string
     }
     c, err := upgrader.Upgrade(w, r, nil)
     if err != nil {
@@ -56,42 +89,22 @@ func web_login_status(w http.ResponseWriter, r *http.Request) {
     }
     defer c.Close()
     for {
+        log.Println("start read message")
         mt, message, err := c.ReadMessage()
-        log.Println(message)
-        message_str := fmt.Sprintf("%s", message)
-        log.Println(strings.NewReader(message_str))
-
-        byt := []byte(`{"Num":"b","Strs":"a"}`)
-        log.Println(byt, string(byt))
-        log.Println(message, string(message))
-
-        type DataMessage struct {
-            Num string
-            Strs string
-        }
-        var d DataMessage
-        d_err := json.Unmarshal(byt, &d)
-        log.Println(d_err, "llllll")
-        log.Println(d.Num, "dddddddd")
-
-        var dat map[string]interface{}
-        if err := json.Unmarshal(byt, &dat); err != nil {
-        }
-        fmt.Println(dat)
-        fmt.Println(dat["SessionKey"])
-        dec := json.NewDecoder(strings.NewReader(message_str))
-        log.Println(dec, "dec")
+        log.Println("end read message")
 
         var m Message
         err = json.Unmarshal(message, &m)
-        log.Println(fmt.Printf("%v: %v\n", m.SessionKey, m.Token))
+
+        rt := manage_web_login_status(m.Token)
+        result := []byte(rt)
 
         if err != nil {
             log.Println("read:", err)
             break
         }
         log.Printf("recv: %s", message)
-        err = c.WriteMessage(mt, message)
+        err = c.WriteMessage(mt, result)
         if err != nil {
             log.Println("write:", err)
             break
@@ -100,7 +113,6 @@ func web_login_status(w http.ResponseWriter, r *http.Request) {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-    redis_client.ExampleClient()
     if r.URL.Path != "/" {
         http.Error(w, "Not found", 404)
         return

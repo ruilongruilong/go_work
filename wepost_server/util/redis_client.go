@@ -3,6 +3,7 @@ package redis_client
 import (
     "fmt"
     "github.com/go-redis/redis"
+    // "log"
 )
 
 var client redis.Client
@@ -15,8 +16,28 @@ func ExampleNewClient() redis.Client{
     })
 
     pong, err := client.Ping().Result()
-    fmt.Println(pong, err)
+    if err != nil {
+        fmt.Println(pong, err)
+    }
     return *client
+}
+
+func GetTTL(key string) int {
+    client :=  ExampleNewClient()
+    val, err := client.TTL(key).Result()
+    if err != nil {
+        panic(err)
+    }
+    return int(val.Seconds())
+}
+
+func GetValue(key string) string {
+    client :=  ExampleNewClient()
+    val, err := client.Get(key).Result()
+    if err != nil {
+        panic(err)
+    }
+    return val
 }
 
 func ExampleClient() {
